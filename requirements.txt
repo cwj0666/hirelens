@@ -1,0 +1,14 @@
+google-adk==1.9.0
+geopy==2.4.1
+httpx
+fastmcp==3.1.1
+pandas
+python-dotenv
+langchain==0.3.27
+langchain-openai==0.3.35
+langchain-core==0.3.79
+langchain-chroma==0.2.6
+langgraph==0.4.1
+pydantic
+streamlit
+st-styled==0.4.0
