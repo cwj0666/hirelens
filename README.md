@@ -10,6 +10,8 @@
 ### 평가 워크플로우 (LangGraph)
 
 평가 파이프라인은 LangGraph의 `StateGraph`로 구성됩니다. 상태 객체 `NegotiationState`가 그래프 전체를 관통하며, 각 노드는 상태를 읽고 갱신하는 순수 함수로 작성되어 있습니다.
+<img width="578" height="531" alt="image" src="https://github.com/user-attachments/assets/71ea7059-4282-4022-94f3-8d7786411d7d" />
+
 
 ```
 START
