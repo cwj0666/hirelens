@@ -77,28 +77,52 @@ adk web src
 
 ## 프로젝트 구조
 
-```
-src/
-  hirelens/
-    agent.py                ADK 코칭 에이전트 (root_agent)
-    evaluation/
-      models.py             Pydantic 모델, 상수
-      prompts.py            평가 프롬프트 (HR, 부서장, 인재개발, 협상)
-      workflow.py           LangGraph StateGraph
-      storage.py            SQLite + Chroma RAG 저장소
-    tools/
-      company_tools.py      KRX 종목 검색, 토스증권 API
-      news_tools.py         뉴스 수집·선별·요약
-      session_tools.py      세션 로드/목록 (ADK tool)
-    mcp/
-      server.py             FastMCP 서버
-    web/
-      styles.py             Streamlit CSS
-      components.py         렌더링 함수, 결과 요약
-      archive.py            HTML 아카이브 생성
-    specialists/            ADK sub_agent (추후 확장용)
-  hirelens_app.py           Streamlit 메인 진입점
-data/
-  reference/                정적 참조 데이터
-  runtime/                  실행 중 자동 생성 (DB, 벡터 저장소)
+```mermaid
+graph TD
+    subgraph src
+        APP[hirelens_app.py<br><i>Streamlit 진입점</i>]
+
+        subgraph hirelens
+            AGENT[agent.py<br><i>ADK 코칭 에이전트</i>]
+
+            subgraph evaluation
+                MODELS[models.py<br><i>Pydantic 모델, 상수</i>]
+                PROMPTS[prompts.py<br><i>평가 프롬프트</i>]
+                WORKFLOW[workflow.py<br><i>LangGraph StateGraph</i>]
+                STORAGE[storage.py<br><i>SQLite + Chroma RAG</i>]
+            end
+
+            subgraph tools
+                COMPANY[company_tools.py<br><i>종목 검색, 토스증권 API</i>]
+                NEWS[news_tools.py<br><i>뉴스 수집·선별·요약</i>]
+                SESSION[session_tools.py<br><i>세션 로드/목록</i>]
+            end
+
+            subgraph mcp
+                SERVER[server.py<br><i>FastMCP 서버</i>]
+            end
+
+            subgraph web
+                STYLES[styles.py<br><i>CSS</i>]
+                COMPONENTS[components.py<br><i>렌더링 함수</i>]
+                ARCHIVE[archive.py<br><i>HTML 아카이브</i>]
+            end
+
+            SPECIALISTS[specialists/<br><i>ADK sub_agent</i>]
+        end
+    end
+
+    subgraph data
+        REF[reference/<br><i>정적 참조 데이터</i>]
+        RUNTIME[runtime/<br><i>DB, 벡터 저장소</i>]
+    end
+
+    APP --> web
+    APP --> evaluation
+    AGENT --> tools
+    AGENT --> SESSION
+    SERVER --> WORKFLOW
+    WORKFLOW --> MODELS
+    WORKFLOW --> PROMPTS
+    STORAGE --> RUNTIME
 ```
