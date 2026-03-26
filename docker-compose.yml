@@ -1,0 +1,31 @@
+services:
+  streamlit:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: /app/docker/run-streamlit.sh
+    env_file:
+      - .env
+    environment:
+      STREAMLIT_PORT: 8501
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data/runtime:/app/data/runtime
+    restart: unless-stopped
+
+  adk-web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: /app/docker/run-adk-web.sh
+    env_file:
+      - .env
+    environment:
+      ADK_WEB_PORT: 8000
+      ADK_WEB_HOST: 0.0.0.0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/runtime:/app/data/runtime
+    restart: unless-stopped

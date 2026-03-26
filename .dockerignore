@@ -1,14 +1,15 @@
+.git
+.gitignore
 .env
-.venv/
-.vscode/
-
+.venv
+.vscode
+.claude
+docker/*.local
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-
-.claude/
 
 data/runtime/*
 !data/runtime/.gitkeep

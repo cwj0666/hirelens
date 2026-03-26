@@ -78,13 +78,40 @@ streamlit run src/hirelens_app.py
 adk web src
 ```
 
+**실행 스크립트**
+```bash
+./docker/run-streamlit.sh
+./docker/run-adk-web.sh
+```
+
+### Docker
+
+**Streamlit + ADK 동시 실행**
+```bash
+docker compose up --build
+```
+
+**개별 서비스 실행**
+```bash
+docker compose up --build streamlit
+docker compose up --build adk-web
+```
+
+컨테이너 실행 시 `data/runtime`은 볼륨으로 공유되며, Streamlit과 ADK가 같은 SQLite 세션 저장소와 Chroma 데이터를 사용합니다.
+
 
 ## 프로젝트 구조
 
 ```
+docker-compose.yml
+docker/
+  Dockerfile               컨테이너 이미지 정의
+  run-streamlit.sh         Streamlit 실행 스크립트
+  run-adk-web.sh           ADK 웹 실행 스크립트
 src/
   hirelens/
     agent.py                ADK 코칭 에이전트 (root_agent)
+    streamlit_app.py        Streamlit 앱 본체
     evaluation/
       models.py             Pydantic 모델, 상수
       prompts.py            평가 프롬프트 (HR, 부서장, 인재개발, 협상)
@@ -101,7 +128,7 @@ src/
       components.py         렌더링 함수, 결과 요약
       archive.py            HTML 아카이브 생성
     specialists/            개별 ADK sub_agent 정의
-  hirelens_app.py           Streamlit 메인 진입점
+  hirelens_app.py           Streamlit 호환용 진입점 래퍼
 data/
   reference/                정적 참조 데이터
   runtime/                  실행 중 자동 생성 (DB, 벡터 저장소)
@@ -112,7 +139,7 @@ data/
 ```mermaid
 graph LR
     subgraph Entry["엔트리포인트"]
-        Streamlit["Streamlit App<br/>src/hirelens_app.py"]
+        Streamlit["Streamlit App<br/>hirelens/streamlit_app.py"]
         ADK["ADK Root Agent<br/>hirelens/agent.py"]
     end
 
