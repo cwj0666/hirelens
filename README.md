@@ -2,8 +2,7 @@
 
 자기소개서를 3인 평가자(HR 담당자, 현업 부서장, 인재개발팀)가 협상 기반으로 평가하고, 코칭까지 연결하는 멀티 에이전트 시스템입니다.
 
-<!-- 데모 스크린샷: 아래에 Streamlit UI 캡처를 추가하세요 -->
-<!-- ![demo](assets/demo.png) -->
+<img width="1914" height="930" alt="스크린샷 2026-03-26 142544" src="https://github.com/user-attachments/assets/59fb3fe3-b282-4aa7-9a22-11e3ad09937d" />
 
 
 ## 주요 기능
