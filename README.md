@@ -80,7 +80,7 @@ adk web src
 docker compose up --build
 ```
 
-개별 서비스만 실행하려면:
+개별 실행:
 
 ```bash
 docker compose up --build streamlit
