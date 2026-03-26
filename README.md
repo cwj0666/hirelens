@@ -76,12 +76,17 @@ adk web src
 
 ### Docker
 
+**전체 실행**
 ```bash
 docker compose up --build
 ```
 
+<<<<<<< HEAD
 개별 실행
 
+=======
+**개별 실행**
+>>>>>>> 067f711 (docs: clarify local and docker setup in README)
 ```bash
 docker compose up --build streamlit
 docker compose up --build adk-web
