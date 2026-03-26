@@ -107,11 +107,11 @@ data/
 
 ```mermaid
 graph LR
-    Streamlit -->|평가 요청| Evaluation
-    Evaluation -->|결과 저장| Storage
+    Streamlit -->|직접 호출| Evaluation
+    Evaluation -->|LLM 호출| OpenAI[OpenAI API]
+    Evaluation -->|결과 저장| Storage[(SQLite · Chroma)]
     ADK[ADK 코칭] -->|세션 로드| Storage
-    ADK -->|재평가| MCP
-    MCP -->|파이프라인 호출| Evaluation
-    ADK --> Tools
-    Tools -->|뉴스·기업 정보| Evaluation
+    ADK -->|재평가| MCP[FastMCP]
+    MCP --> Evaluation
+    ADK --> Tools[Tools\n뉴스 · 기업 정보]
 ```
