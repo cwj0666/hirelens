@@ -343,27 +343,27 @@ def build_revision_suggestions(result: dict) -> dict[str, list[str]]:
     }
 
 
-def render_company_news_report(report: dict, show_header: bool = True) -> None:
-    if not report:
+def render_company_news_summary(summary: dict, show_header: bool = True) -> None:
+    if not summary:
         return
 
     if show_header:
         render_section_header(
-            "회사 뉴스 브리프",
+            "회사 뉴스 요약",
             "수집된 최근 뉴스를 한 번에 읽기 쉽게 요약한 내용입니다.",
         )
 
-    summary = report.get("summary", "")
-    outlook = report.get("outlook", "")
-    recurring_topics = report.get("recurring_topics", [])
-    key_points = report.get("key_points", [])
-    watch_points = report.get("watch_points", [])
-    application_tips = report.get("application_tips", [])
-    source_lines = report.get("source_lines", "")
-    article_count = report.get("article_count", 0)
-    relevant_article_count = report.get("relevant_article_count", 0)
-    used_article_count = report.get("used_article_count", 0)
-    query_terms = report.get("query_terms", [])
+    summary_text = summary.get("summary", "")
+    outlook = summary.get("outlook", "")
+    recurring_topics = summary.get("recurring_topics", [])
+    key_points = summary.get("key_points", [])
+    watch_points = summary.get("watch_points", [])
+    application_tips = summary.get("application_tips", [])
+    source_lines = summary.get("source_lines", "")
+    article_count = summary.get("article_count", 0)
+    relevant_article_count = summary.get("relevant_article_count", 0)
+    used_article_count = summary.get("used_article_count", 0)
+    query_terms = summary.get("query_terms", [])
 
     metric_col1, metric_col2, metric_col3 = st.columns(3)
     with metric_col1:
@@ -371,12 +371,11 @@ def render_company_news_report(report: dict, show_header: bool = True) -> None:
     with metric_col2:
         st.metric("선별 기사", relevant_article_count)
     with metric_col3:
-        st.metric("브리프 반영", used_article_count)
+        st.metric("요약 반영", used_article_count)
 
-    recurring_highlights = _normalize_text_items(recurring_topics[:2])
     render_surface_card(
         "핵심 요약",
-        _rich_paragraphs_html([summary or "요약 정보가 없습니다."]),
+        _rich_paragraphs_html([summary_text or "요약 정보가 없습니다."]),
     )
 
     col1, col2 = st.columns(2)
@@ -474,7 +473,7 @@ def render_revision(
     result: dict,
     company_info: dict | None,
     job_posting: str,
-    company_news_report: dict | None = None,
+    company_news_summary: dict | None = None,
 ) -> None:
     render_section_header("수정안", "")
 
@@ -514,10 +513,10 @@ def render_revision(
             )
         action_points.extend(_normalize_text_items(company_info.get("기업코멘트")))
 
-    if company_news_report:
-        summary = company_news_report.get("summary", "")
-        outlook = company_news_report.get("outlook", "")
-        recurring_topics = company_news_report.get("recurring_topics", [])
+    if company_news_summary:
+        summary = company_news_summary.get("summary", "")
+        outlook = company_news_summary.get("outlook", "")
+        recurring_topics = company_news_summary.get("recurring_topics", [])
         if summary:
             fit_paragraphs.append(_ensure_sentence(summary))
             fit_paragraphs.append(
@@ -529,7 +528,7 @@ def render_revision(
                 "이 변화가 실제 채용 니즈와 직무 기대치로 어떻게 이어질지를 함께 읽어 두시는 편이 좋습니다. 자기소개서에서도 이 흐름 안에서 본인이 어떤 문제를 해결할 수 있고, 어떤 방식으로 기여할 수 있는지를 더 구체적으로 보여주시면 설득력이 높아집니다.",
             )
         action_points.extend(_normalize_text_items(recurring_topics[:2]))
-        action_points.extend(_normalize_text_items(company_news_report.get("application_tips", [])))
+        action_points.extend(_normalize_text_items(company_news_summary.get("application_tips", [])))
 
     if job_posting:
         fit_paragraphs.append(
@@ -640,8 +639,8 @@ def render_result_overview(result: dict) -> None:
     render_surface_card("종합 요약", overview_html)
 
 
-def render_company_insights(company_info: dict | None, company_news_report: dict | None) -> None:
-    if not company_info and not company_news_report:
+def render_company_insights(company_info: dict | None, company_news_summary: dict | None) -> None:
+    if not company_info and not company_news_summary:
         return
 
     render_section_header("회사 인사이트", "")
@@ -676,12 +675,12 @@ def render_company_insights(company_info: dict | None, company_news_report: dict
         detail_points.extend(_normalize_text_items(company_info.get("기업코멘트")))
         detail_points.extend(_normalize_text_items(company_info.get("전망")))
 
-    if company_news_report:
-        summary = company_news_report.get("summary", "")
-        outlook = company_news_report.get("outlook", "")
-        recurring_topics = company_news_report.get("recurring_topics", [])
-        key_points = company_news_report.get("key_points", [])
-        watch_points = company_news_report.get("watch_points", [])
+    if company_news_summary:
+        summary = company_news_summary.get("summary", "")
+        outlook = company_news_summary.get("outlook", "")
+        recurring_topics = company_news_summary.get("recurring_topics", [])
+        key_points = company_news_summary.get("key_points", [])
+        watch_points = company_news_summary.get("watch_points", [])
 
         if summary:
             overview_paragraphs.append(_ensure_sentence(summary))
@@ -732,9 +731,9 @@ def _build_source_card_html(item: dict) -> str:
 def render_result_sources(result: dict) -> None:
     render_section_header("출처", "")
 
-    company_news_report = result.get("_company_news_report", {}) or {}
-    used_articles = company_news_report.get("used_articles") or company_news_report.get("articles") or []
-    query_terms = company_news_report.get("query_terms") or []
+    company_news_summary = result.get("_company_news_summary", {}) or {}
+    used_articles = company_news_summary.get("used_articles") or company_news_summary.get("articles") or []
+    query_terms = company_news_summary.get("query_terms") or []
     reference_text = result.get("_reference_text", "")
 
     if used_articles:
@@ -758,11 +757,11 @@ def render_results(result: dict, active_section: str = RESULT_SECTION_OPTIONS[0]
     job_posting = result.get("_job_posting", "")
     if company_info and "error" in company_info:
         company_info = None
-    company_news_report = result.get("_company_news_report", {})
+    company_news_summary = result.get("_company_news_summary", {})
 
     if active_section == "요약":
         render_result_overview(result)
-        render_company_insights(company_info, company_news_report)
+        render_company_insights(company_info, company_news_summary)
         return
     if active_section == "평가 기록":
         render_first_eval(result)
@@ -773,7 +772,7 @@ def render_results(result: dict, active_section: str = RESULT_SECTION_OPTIONS[0]
         render_final_verdict(result)
         return
     if active_section == "수정안":
-        render_revision(result, company_info, job_posting, company_news_report)
+        render_revision(result, company_info, job_posting, company_news_summary)
         return
     if active_section == "면접 질문":
         render_interview_questions(result)

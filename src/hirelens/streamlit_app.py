@@ -24,12 +24,12 @@ from hirelens.evaluation.storage import (
 )
 from hirelens.evaluation.workflow import build_graph, configure_llm
 from hirelens.tools.company_tools import get_code, get_company_info
-from hirelens.tools.news_tools import get_company_news_report
+from hirelens.tools.news_tools import get_company_news_summary
 from hirelens.web.archive import (
     build_news_archive_html,
     build_result_archive_html,
     make_archive_filename,
-    make_news_archive_filename,
+    make_news_summary_archive_filename,
 )
 from hirelens.web.components import (
     RESULT_SECTION_OPTIONS,
@@ -278,7 +278,7 @@ def run_analysis(
 ) -> dict:
     company_info = None
     company_news = ""
-    company_news_report = {}
+    company_news_summary = {}
 
     if company_name:
         with st.spinner("회사 정보 조회 중..."):
@@ -296,13 +296,13 @@ def run_analysis(
 
         with st.spinner("최근 뉴스를 가져오는 중..."):
             try:
-                company_news_report = get_company_news_report(
+                company_news_summary = get_company_news_summary(
                     company_name,
                     industry=(company_info or {}).get("업종", ""),
                     model_name=model_name,
                     temperature=min(temperature, 0.2),
                 )
-                company_news = company_news_report.get("briefing_text", "")
+                company_news = company_news_summary.get("summary_text", "")
             except Exception:
                 logger.warning("뉴스 수집 실패: %s", company_name, exc_info=True)
 
@@ -355,7 +355,7 @@ def run_analysis(
     result["_reference_text"] = reference_text
     result["_company_info"] = company_info
     result["_company_news"] = company_news
-    result["_company_news_report"] = company_news_report
+    result["_company_news_summary"] = company_news_summary
     result["_job_posting"] = job_posting
     session_id = save_session(result, company_name=company_name)
     result["_session_id"] = session_id
@@ -364,7 +364,7 @@ def run_analysis(
 
 def render_result_toolbar(result: dict) -> None:
     session_id = result.get("_session_id", "")
-    news_report = result.get("_company_news_report", {})
+    news_summary = result.get("_company_news_summary", {})
     result_archive_html = build_result_archive_html(result)
     with st.container(border=True):
         st.html('<div class="input-card-title">세션 코드 및 저장</div>')
@@ -380,12 +380,12 @@ def render_result_toolbar(result: dict) -> None:
                 use_container_width=True,
             )
         with button_col2:
-            if news_report:
-                news_archive_html = build_news_archive_html(news_report)
+            if news_summary:
+                news_archive_html = build_news_archive_html(news_summary)
                 st.download_button(
                     "뉴스 저장",
                     data=news_archive_html,
-                    file_name=make_news_archive_filename(),
+                    file_name=make_news_summary_archive_filename(),
                     mime="text/html",
                     use_container_width=True,
                 )

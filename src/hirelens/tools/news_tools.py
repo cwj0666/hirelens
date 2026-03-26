@@ -11,7 +11,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from hirelens.evaluation.models import DEFAULT_MODEL
-from hirelens.evaluation.storage import load_recent_news_report, save_news_report
+from hirelens.evaluation.storage import load_recent_news_summary, save_news_summary
 
 NAVER_NEWS_URL = "https://openapi.naver.com/v1/search/news.json"
 GOOGLE_NEWS_RSS_URL = "https://news.google.com/rss/search"
@@ -155,7 +155,7 @@ IMPORTANT_NEWS_KEYWORDS = {
 }
 
 
-class CompanyNewsReport(BaseModel):
+class CompanyNewsSummary(BaseModel):
     summary: str = Field(description="최근 회사/산업 뉴스 핵심 요약 3~5문장")
     outlook: str = Field(description="향후 3~6개월 관점의 전망 3~4문장")
     recurring_topics: list[str] = Field(description="반복적으로 관찰된 핵심 주제 2~4개")
@@ -166,7 +166,7 @@ class CompanyNewsReport(BaseModel):
 
 class NewsArticleAssessment(BaseModel):
     index: int = Field(description="기사 인덱스")
-    keep: bool = Field(description="브리프에 반영할 가치가 있는 기사인지 여부")
+    keep: bool = Field(description="요약에 반영할 가치가 있는 기사인지 여부")
     relevance: str = Field(description="높음, 중간, 낮음 중 하나")
     topic: str = Field(description="기사의 주제 분류")
     theme: str = Field(description="반복 이슈로 묶기 위한 짧은 테마")
@@ -529,7 +529,7 @@ def _select_relevant_items(items: list[dict], final_limit: int) -> list[dict]:
     return kept[:final_limit]
 
 
-def _build_briefing_text(report: dict) -> str:
+def _build_summary_text(report: dict) -> str:
     sections = []
 
     summary = (report.get("summary") or "").strip()
@@ -606,10 +606,10 @@ def _summarize_news_items(
     model_name: str,
     temperature: float,
 ) -> dict:
-    parser = PydanticOutputParser(pydantic_object=CompanyNewsReport)
+    parser = PydanticOutputParser(pydantic_object=CompanyNewsSummary)
     prompt = PromptTemplate(
         template=(
-            "당신은 채용 지원자를 위한 기업 뉴스 브리핑 작성자다.\n"
+            "당신은 채용 지원자를 위한 기업 뉴스 요약 작성자다.\n"
             "아래 기사 목록을 읽고 반복적으로 등장하는 이슈를 중심으로 요약하라.\n"
             "- 기사 여러 건에서 공통적으로 보이는 흐름을 우선 정리할 것\n"
             "- 단일 기사에만 나온 내용을 전체 흐름처럼 과장하지 말 것\n"
@@ -645,18 +645,18 @@ def search_company_news(
     """
     회사 관련 최신 뉴스를 검색하고 선별된 기사 목록을 문자열로 반환한다.
     """
-    report = get_company_news_report(
+    summary = get_company_news_summary(
         company_name=company_name,
         max_age_days=max_age_days,
         final_article_limit=max_results,
     )
-    used_articles = report.get("used_articles", [])
+    used_articles = summary.get("used_articles", [])
     if not used_articles:
         return ""
     return _format_news_items(used_articles[:max_results])
 
 
-def get_company_news_report(
+def get_company_news_summary(
     company_name: str,
     industry: str = "",
     max_age_days: int = DEFAULT_NEWS_WINDOW_DAYS,
@@ -668,7 +668,7 @@ def get_company_news_report(
     cache_freshness_hours: int = DEFAULT_CACHE_FRESHNESS_HOURS,
 ) -> dict:
     if use_cache:
-        cached = load_recent_news_report(company_name, freshness_hours=cache_freshness_hours)
+        cached = load_recent_news_summary(company_name, freshness_hours=cache_freshness_hours)
         if cached:
             return cached
 
@@ -694,7 +694,7 @@ def get_company_news_report(
         used_articles = reviewed_items[: min(len(reviewed_items), final_article_limit)]
 
     try:
-        report = _summarize_news_items(
+        summary = _summarize_news_items(
             company_name=company_name,
             industry=industry,
             items=used_articles,
@@ -702,18 +702,19 @@ def get_company_news_report(
             temperature=temperature,
         )
     except Exception:
-        report = _build_fallback_report(company_name, used_articles)
+        summary = _build_fallback_report(company_name, used_articles)
 
-    report["company_name"] = company_name
-    report["industry"] = industry
-    report["query_terms"] = queries
-    report["article_count"] = len(reviewed_items)
-    report["relevant_article_count"] = len([item for item in reviewed_items if item.get("keep")])
-    report["used_article_count"] = len(used_articles)
-    report["articles"] = reviewed_items
-    report["used_articles"] = used_articles
-    report["source_lines"] = _format_news_sources(used_articles)
-    report["briefing_text"] = _build_briefing_text(report)
+    summary["company_name"] = company_name
+    summary["industry"] = industry
+    summary["query_terms"] = queries
+    summary["article_count"] = len(reviewed_items)
+    summary["relevant_article_count"] = len([item for item in reviewed_items if item.get("keep")])
+    summary["used_article_count"] = len(used_articles)
+    summary["articles"] = reviewed_items
+    summary["used_articles"] = used_articles
+    summary["source_lines"] = _format_news_sources(used_articles)
+    summary["summary_text"] = _build_summary_text(summary)
 
-    save_news_report(company_name, report)
-    return report
+    save_news_summary(company_name, summary)
+    return summary
+

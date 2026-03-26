@@ -12,7 +12,7 @@ from google.genai import types
 from mcp import StdioServerParameters
 
 from .tools.company_tools import get_code, get_company_info
-from .tools.news_tools import get_company_news_report, search_company_news
+from .tools.news_tools import get_company_news_summary, search_company_news
 from .evaluation.models import DEFAULT_ADK_MODEL
 from .tools.session_tools import (
     extract_session_id,
@@ -80,7 +80,7 @@ def _build_session_context(session_data: dict) -> str:
         "career_level": session_data.get("career_level", "자동"),
         "job_posting": session_data.get("_job_posting", ""),
         "company_news": session_data.get("_company_news", ""),
-        "company_news_report": session_data.get("_company_news_report", {}),
+        "company_news_summary": session_data.get("_company_news_summary", {}),
         "final_decision": session_data.get("final_decision", ""),
         "final_score": session_data.get("final_score", 0.0),
         "final_reasoning": session_data.get("final_reasoning", ""),
@@ -107,7 +107,7 @@ def coaching_instruction(ctx: ReadonlyContext) -> str:
         "- 세션이 아직 없으면 먼저 load_evaluation_session 또는 list_recent_sessions 사용을 우선 제안한다.\n"
         "- 세션이 로드된 뒤에는 기존 평가의 강점, 약점, 판정 근거를 근거로 답한다.\n"
         "- 수정본 재평가 시 가능하면 기존 세션의 모집공고와 경력 수준을 그대로 재사용한다.\n"
-        "- 회사 관련 보강이 필요하면 get_code, get_company_info, get_company_news_report, search_company_news를 활용한다.\n"
+        "- 회사 관련 보강이 필요하면 get_code, get_company_info, get_company_news_summary, search_company_news를 활용한다.\n"
         "- 재평가 결과를 설명할 때는 기존 결과 대비 점수, 판정, 약점 변화 중심으로 비교한다.\n"
         "- 모든 답변은 한국어로 작성한다.\n"
     )
@@ -139,7 +139,7 @@ root_agent = Agent(
         hirelens_mcp,
         get_code,
         get_company_info,
-        get_company_news_report,
+        get_company_news_summary,
         search_company_news,
     ],
 )

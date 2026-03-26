@@ -371,7 +371,7 @@ def build_result_archive_html(
     result: dict,
     company_info: dict | None = None,
     job_posting: str = "",
-    company_news_report: dict | None = None,
+    company_news_summary: dict | None = None,
 ) -> str:
     exported_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     final_decision = result.get("final_decision", "")
@@ -380,7 +380,7 @@ def build_result_archive_html(
     total_rounds = result.get("current_round", 1)
     cover_letter = escape(result.get("_cover_letter", ""))
     reference_text = escape(result.get("_reference_text", ""))
-    news_report = result.get("_company_news_report", {}) or {}
+    news_summary = result.get("_company_news_summary", {}) or {}
     summary = build_result_summary(result)
     revision = build_revision_suggestions(result)
     display_decision = format_decision(final_decision)
@@ -525,7 +525,7 @@ def build_result_archive_html(
     # ── 회사 맞춤 반영 ────────────────────────────────────────
     _ci = company_info if company_info is not None else result.get("_company_info")
     _jp = job_posting or result.get("_job_posting", "")
-    _cnr = company_news_report if company_news_report is not None else news_report
+    _cnr = company_news_summary if company_news_summary is not None else news_summary
 
     company_name = _ci.get("회사명", "해당 회사") if _ci else "해당 회사"
     fit_paragraphs: list[str] = []
@@ -652,12 +652,12 @@ def make_archive_filename() -> str:
     return f"cover-letter-review-{timestamp}.html"
 
 
-def build_news_archive_html(report: dict) -> str:
+def build_news_archive_html(summary: dict) -> str:
     exported_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    company_name = escape(report.get("company_name", "회사"))
-    article_count = int(report.get("article_count", 0))
-    relevant_count = int(report.get("relevant_article_count", 0))
-    used_count = int(report.get("used_article_count", 0))
+    company_name = escape(summary.get("company_name", "회사"))
+    article_count = int(summary.get("article_count", 0))
+    relevant_count = int(summary.get("relevant_article_count", 0))
+    used_count = int(summary.get("used_article_count", 0))
 
     metrics_html = f"""
     <div class="result-summary-grid">
@@ -670,7 +670,7 @@ def build_news_archive_html(report: dict) -> str:
             <div class="result-summary-value">{relevant_count}건</div>
         </div>
         <div class="result-summary-card">
-            <div class="result-summary-label">브리프 반영</div>
+            <div class="result-summary-label">요약 반영</div>
             <div class="result-summary-value">{used_count}건</div>
         </div>
     </div>
@@ -678,15 +678,15 @@ def build_news_archive_html(report: dict) -> str:
 
     summary_card = _surface_card(
         "핵심 요약",
-        f'<p class="surface-copy">{escape(report.get("summary", ""))}</p>',
+        f'<p class="surface-copy">{escape(summary.get("summary", ""))}</p>',
     )
 
     section_items = [
-        ("핵심 이슈", report.get("key_points", []), True),
-        ("향후 전망", report.get("outlook", ""), False),
-        ("반복 이슈", report.get("recurring_topics", []), True),
-        ("체크 포인트", report.get("watch_points", []), True),
-        ("자소서/면접 반영 포인트", report.get("application_tips", []), True),
+        ("핵심 이슈", summary.get("key_points", []), True),
+        ("향후 전망", summary.get("outlook", ""), False),
+        ("반복 이슈", summary.get("recurring_topics", []), True),
+        ("체크 포인트", summary.get("watch_points", []), True),
+        ("자소서/면접 반영 포인트", summary.get("application_tips", []), True),
     ]
     section_cards = []
     for label, content, is_list in section_items:
@@ -697,7 +697,7 @@ def build_news_archive_html(report: dict) -> str:
         section_cards.append(_surface_card(label, body))
 
     # 뉴스 아카이브에는 출처 포함
-    used_articles = report.get("used_articles") or report.get("articles") or []
+    used_articles = summary.get("used_articles") or summary.get("articles") or []
     source_html = ""
     if used_articles:
         source_items = []
@@ -723,10 +723,10 @@ def build_news_archive_html(report: dict) -> str:
             </div>
             """)
         source_html = _section_divider("기사 출처") + "".join(source_items)
-    elif report.get("source_lines"):
+    elif summary.get("source_lines"):
         source_html = (
             _section_divider("기사 출처")
-            + _surface_card("", f'<pre>{escape(report.get("source_lines", ""))}</pre>')
+            + _surface_card("", f'<pre>{escape(summary.get("source_lines", ""))}</pre>')
         )
 
     return f"""<!doctype html>
@@ -734,15 +734,15 @@ def build_news_archive_html(report: dict) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{company_name} 뉴스 브리프</title>
+  <title>{company_name} 뉴스 요약</title>
   <style>{ARCHIVE_CSS}</style>
 </head>
 <body>
   <div class="container">
     <div class="hero-panel">
       <div class="hero-eyebrow">{APP_NAME}</div>
-      <h1 class="hero-title">{company_name} 뉴스 브리프</h1>
-      <div class="hero-copy">최근 수집된 뉴스를 요약한 회사 브리핑</div>
+      <h1 class="hero-title">{company_name} 뉴스 요약</h1>
+      <div class="hero-copy">최근 수집된 뉴스를 정리한 회사 뉴스 요약</div>
       <div class="hero-meta">
         <span class="hero-pill">내보낸 시각: {exported_at}</span>
       </div>
@@ -757,6 +757,6 @@ def build_news_archive_html(report: dict) -> str:
 </html>"""
 
 
-def make_news_archive_filename() -> str:
+def make_news_summary_archive_filename() -> str:
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    return f"company-news-brief-{timestamp}.html"
+    return f"company-news-summary-{timestamp}.html"

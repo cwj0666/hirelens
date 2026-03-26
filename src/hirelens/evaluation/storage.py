@@ -17,12 +17,90 @@ DB_PATH = RUNTIME_DIR / "cover_letters.db"
 CHROMA_DIR = str(RUNTIME_DIR / "chroma" / "cover_letters")
 COLLECTION_NAME = "cover_letter_examples"
 EMBED_MODEL = "text-embedding-3-small"
+NEWS_SUMMARIES_TABLE = "news_summaries"
+LEGACY_NEWS_BRIEFS_TABLE = "news_briefs"
 
 
 def _get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
+    row = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table_name,),
+    ).fetchone()
+    return row is not None
+
+
+def _normalize_news_summary_payload(summary: dict) -> dict:
+    normalized = dict(summary)
+    if "summary_text" not in normalized and normalized.get("briefing_text"):
+        normalized["summary_text"] = normalized["briefing_text"]
+    normalized.pop("briefing_text", None)
+    return normalized
+
+
+def _normalize_session_payload(data: dict) -> dict:
+    normalized = dict(data)
+    if "_company_news_summary" not in normalized and "_company_news_report" in normalized:
+        normalized["_company_news_summary"] = normalized["_company_news_report"]
+    normalized.pop("_company_news_report", None)
+
+    company_news_summary = normalized.get("_company_news_summary")
+    if isinstance(company_news_summary, dict):
+        normalized["_company_news_summary"] = _normalize_news_summary_payload(company_news_summary)
+
+    return normalized
+
+
+def _migrate_news_summary_table(conn: sqlite3.Connection) -> None:
+    has_new = _table_exists(conn, NEWS_SUMMARIES_TABLE)
+    has_legacy = _table_exists(conn, LEGACY_NEWS_BRIEFS_TABLE)
+
+    if has_legacy and not has_new:
+        conn.execute(f"ALTER TABLE {LEGACY_NEWS_BRIEFS_TABLE} RENAME TO {NEWS_SUMMARIES_TABLE}")
+        return
+
+    if has_legacy and has_new:
+        conn.execute(
+            f"""
+            INSERT OR IGNORE INTO {NEWS_SUMMARIES_TABLE}
+                (id, company_name, report_json, article_count, relevant_article_count, created_at)
+            SELECT id, company_name, report_json, article_count, relevant_article_count, created_at
+            FROM {LEGACY_NEWS_BRIEFS_TABLE}
+            """,
+        )
+        conn.execute(f"DROP TABLE {LEGACY_NEWS_BRIEFS_TABLE}")
+
+
+def _migrate_news_summary_payloads(conn: sqlite3.Connection) -> None:
+    if _table_exists(conn, NEWS_SUMMARIES_TABLE):
+        rows = conn.execute(
+            f"SELECT id, report_json FROM {NEWS_SUMMARIES_TABLE}",
+        ).fetchall()
+        for row in rows:
+            summary = json.loads(row["report_json"])
+            normalized = _normalize_news_summary_payload(summary)
+            if normalized != summary:
+                conn.execute(
+                    f"UPDATE {NEWS_SUMMARIES_TABLE} SET report_json = ? WHERE id = ?",
+                    (json.dumps(normalized, ensure_ascii=False), row["id"]),
+                )
+
+    session_rows = conn.execute(
+        "SELECT session_id, result_json FROM evaluation_sessions",
+    ).fetchall()
+    for row in session_rows:
+        result = json.loads(row["result_json"])
+        normalized = _normalize_session_payload(result)
+        if normalized != result:
+            conn.execute(
+                "UPDATE evaluation_sessions SET result_json = ? WHERE session_id = ?",
+                (json.dumps(normalized, ensure_ascii=False), row["session_id"]),
+            )
 
 
 def init_db() -> None:
@@ -81,7 +159,7 @@ def init_db() -> None:
     )
     conn.execute(
         """
-        CREATE TABLE IF NOT EXISTS news_briefs (
+        CREATE TABLE IF NOT EXISTS news_summaries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             company_name TEXT NOT NULL,
             report_json TEXT NOT NULL,
@@ -91,6 +169,8 @@ def init_db() -> None:
         )
         """,
     )
+    _migrate_news_summary_table(conn)
+    _migrate_news_summary_payloads(conn)
     conn.commit()
     conn.close()
 
@@ -292,7 +372,7 @@ def _serialize_result(result: dict) -> str:
 
 def _deserialize_result(json_str: str) -> dict:
     """JSON에서 복원하고 평가자 리스트를 EvaluatorOutput으로 역직렬화."""
-    data = json.loads(json_str)
+    data = _normalize_session_payload(json.loads(json_str))
     for role_key in EVALUATOR_ROLES:
         evals_key = f"{role_key}_evals"
         if evals_key in data and isinstance(data[evals_key], list):
@@ -358,13 +438,14 @@ def list_sessions(limit: int = 10) -> list[dict]:
     return [dict(row) for row in rows]
 
 
-def save_news_report(company_name: str, report: dict) -> int:
-    """회사 뉴스 원문과 브리프를 DB에 저장한다."""
+def save_news_summary(company_name: str, summary: dict) -> int:
+    """회사 뉴스 원문과 요약 결과를 DB에 저장한다."""
     init_db()
 
-    articles = report.get("articles", [])
-    article_count = int(report.get("article_count", len(articles)))
-    relevant_count = int(report.get("relevant_article_count", 0))
+    normalized_summary = _normalize_news_summary_payload(summary)
+    articles = normalized_summary.get("articles", [])
+    article_count = int(normalized_summary.get("article_count", len(articles)))
+    relevant_count = int(normalized_summary.get("relevant_article_count", 0))
 
     conn = _get_conn()
     for article in articles:
@@ -406,12 +487,12 @@ def save_news_report(company_name: str, report: dict) -> int:
 
     cursor = conn.execute(
         """
-        INSERT INTO news_briefs (company_name, report_json, article_count, relevant_article_count)
+        INSERT INTO news_summaries (company_name, report_json, article_count, relevant_article_count)
         VALUES (?, ?, ?, ?)
         """,
         (
             company_name,
-            json.dumps(report, ensure_ascii=False),
+            json.dumps(normalized_summary, ensure_ascii=False),
             article_count,
             relevant_count,
         ),
@@ -422,14 +503,14 @@ def save_news_report(company_name: str, report: dict) -> int:
     return int(report_id)
 
 
-def load_recent_news_report(company_name: str, freshness_hours: int = 12) -> dict | None:
-    """최근 생성된 뉴스 브리프 캐시를 반환한다."""
+def load_recent_news_summary(company_name: str, freshness_hours: int = 12) -> dict | None:
+    """최근 생성된 뉴스 요약 캐시를 반환한다."""
     init_db()
     conn = _get_conn()
     row = conn.execute(
         """
         SELECT report_json
-        FROM news_briefs
+        FROM news_summaries
         WHERE company_name = ?
           AND created_at >= datetime('now', ?)
         ORDER BY created_at DESC
@@ -440,4 +521,4 @@ def load_recent_news_report(company_name: str, freshness_hours: int = 12) -> dic
     conn.close()
     if row is None:
         return None
-    return json.loads(row["report_json"])
+    return _normalize_news_summary_payload(json.loads(row["report_json"]))
