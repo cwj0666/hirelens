@@ -58,7 +58,7 @@ NAVER_CLIENT_SECRET=...      # 네이버 뉴스 API 사용 시
 
 네이버 API 키가 없으면 뉴스 수집은 Google News RSS 기준으로만 동작합니다.
 
-### 설치
+### 로컬 실행
 
 ```bash
 python -m venv .venv
@@ -66,32 +66,22 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 실행
-
-**Streamlit (평가 리포트)**
 ```bash
 streamlit run src/hirelens_app.py
 ```
 
-**ADK (코칭 에이전트)**
 ```bash
 adk web src
 ```
 
-**실행 스크립트**
-```bash
-./docker/run-streamlit.sh
-./docker/run-adk-web.sh
-```
-
 ### Docker
 
-**Streamlit + ADK 동시 실행**
 ```bash
 docker compose up --build
 ```
 
-**개별 서비스 실행**
+개별 서비스만 실행하려면:
+
 ```bash
 docker compose up --build streamlit
 docker compose up --build adk-web
