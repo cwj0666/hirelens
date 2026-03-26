@@ -287,8 +287,10 @@ def build_graph(max_rounds: int = DEFAULT_MAX_ROUNDS) -> Any:
     workflow.add_node("generate_interview_questions", generate_interview_questions)
 
     workflow.add_edge(START, "evaluate_hr")
-    workflow.add_edge("evaluate_hr", "evaluate_dept_head")
-    workflow.add_edge("evaluate_dept_head", "evaluate_talent_dev")
+    workflow.add_edge(START, "evaluate_dept_head")
+    workflow.add_edge(START, "evaluate_talent_dev")
+    workflow.add_edge("evaluate_hr", "check_consensus")
+    workflow.add_edge("evaluate_dept_head", "check_consensus")
     workflow.add_edge("evaluate_talent_dev", "check_consensus")
     workflow.add_conditional_edges("check_consensus", route_after_consensus)
     workflow.add_edge("negotiate", "check_consensus")
