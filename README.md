@@ -58,7 +58,7 @@ NAVER_CLIENT_SECRET=...      # 네이버 뉴스 API 사용 시
 
 네이버 API 키가 없으면 뉴스 수집은 Google News RSS 기준으로만 동작합니다.
 
-### 로컬 실행
+### 로컬
 
 ```bash
 python -m venv .venv
@@ -76,20 +76,8 @@ adk web src
 
 ### Docker
 
-**전체 실행**
 ```bash
 docker compose up --build
-```
-
-<<<<<<< HEAD
-개별 실행
-
-=======
-**개별 실행**
->>>>>>> 067f711 (docs: clarify local and docker setup in README)
-```bash
-docker compose up --build streamlit
-docker compose up --build adk-web
 ```
 
 컨테이너 실행 시 `data/runtime`은 볼륨으로 공유되며, Streamlit과 ADK가 같은 SQLite 세션 저장소와 Chroma 데이터를 사용합니다.
