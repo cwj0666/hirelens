@@ -107,11 +107,52 @@ data/
 
 ```mermaid
 graph LR
-    Streamlit -->|직접 호출| Evaluation
-    Evaluation -->|LLM 호출| OpenAI[OpenAI API]
-    Evaluation -->|결과 저장| Storage[(SQLite · Chroma)]
-    ADK[ADK 코칭] -->|세션 로드| Storage
-    ADK -->|재평가| MCP[FastMCP]
-    MCP --> Evaluation
-    ADK --> Tools[Tools\n뉴스 · 기업 정보]
+    subgraph Entry["엔트리포인트"]
+        Streamlit["Streamlit App<br/>src/hirelens_app.py"]
+        ADK["ADK Root Agent<br/>hirelens/agent.py"]
+    end
+
+    subgraph Modules["애플리케이션 모듈"]
+        Web["web<br/>components · styles · archive"]
+        Eval["evaluation<br/>workflow"]
+        Models["evaluation<br/>models · prompts"]
+        Storage["evaluation<br/>storage"]
+        SessionTools["tools<br/>session_tools"]
+        BizTools["tools<br/>company_tools · news_tools"]
+        MCP["mcp.server<br/>FastMCP"]
+    end
+
+    OpenAI["OpenAI API"]
+    ExtAPI["외부 API<br/>Toss · Naver News · Google News"]
+    RefData["참조 데이터<br/>KRX CSV"]
+    RuntimeData[("SQLite · Chroma")]
+
+    Streamlit --> Web
+    Streamlit --> Eval
+    Streamlit --> Storage
+    Streamlit --> BizTools
+
+    Web --> Models
+    Eval --> Models
+    Eval --> OpenAI
+
+    Storage --> RuntimeData
+    Storage --> OpenAI
+
+    BizTools --> ExtAPI
+    BizTools --> RefData
+    BizTools --> Storage
+    BizTools --> Models
+    BizTools --> OpenAI
+
+    ADK --> SessionTools
+    ADK --> BizTools
+    ADK --> MCP
+
+    SessionTools --> Storage
+    SessionTools --> Models
+
+    MCP --> Eval
+    MCP --> Storage
+    MCP --> Models
 ```
