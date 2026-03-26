@@ -18,7 +18,7 @@
 
 ## 아키텍처
 
-평가 파이프라인은 LangGraph `StateGraph` 기반으로 동작하며, 3인 평가자가 병렬 평가를 수행한 뒤 합의 여부에 따라 협상을 반복합니다.
+평가 파이프라인은 LangGraph의 `StateGraph` 기반으로 동작하며, 3인 평가자가 병렬 평가를 수행한 뒤 합의 여부에 따라 협상을 반복합니다.
 
 <img width="578" height="531" alt="LangGraph 워크플로우" src="https://github.com/user-attachments/assets/71ea7059-4282-4022-94f3-8d7786411d7d" />
 
